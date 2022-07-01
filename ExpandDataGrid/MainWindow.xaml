@@ -5,94 +5,60 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ExpandDataGrid"
         mc:Ignorable="d"
-        Loaded="Window_Loaded"
-        Title="MainWindow" Height="700" Width="1500">
+        ContentRendered="Window_ContentRendered"
+        Title="MainWindow" Height="700" Width="1500"
+    xmlns:theme="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero2">
+    
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="50"/>
             <RowDefinition/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition />
-            <ColumnDefinition Width="400"/>
-        </Grid.ColumnDefinitions>
-        <Label Content="{Binding LoadData}"/>
-        <StackPanel Orientation="Horizontal">
-            <GroupBox Header="группировка">
-                <ComboBox SelectionChanged="ComboBox_SelectionChanged"  SelectedIndex="0" Height="25" MinWidth="150" IsEditable="True" IsReadOnly="True">
-                    <TextBlock Text="ТП"/>
-                    <TextBlock Text="РЦ"/>
-                    <TextBlock Text="Регион"/>
-                </ComboBox>
-            </GroupBox>
-          
-        </StackPanel>
-
-        <DataGrid x:Name="gh"  Grid.Row="1" VirtualizingPanel.IsVirtualizing="True"  EnableRowVirtualization="True"
-   VirtualizingPanel.IsVirtualizingWhenGrouping="True" ItemsSource="{Binding collectionView}" CanUserAddRows="False">
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Setter Property="ContextMenu">
+        <!--<DataGrid x:Name="er" VirtualizingStackPanel.IsVirtualizing="True"
+                  VirtualizingStackPanel.CacheLength="30" VirtualizingStackPanel.CacheLengthUnit="Item"
+                  ScrollViewer.IsDeferredScrollingEnabled="True"
+                  VirtualizingStackPanel.ScrollUnit="Pixel" 
+                  ItemsSource="{Binding DataC}">
+            <DataGrid.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </DataGrid.ItemsPanel>
+        </DataGrid>-->
+        
+        <!-- 
+         ScrollViewer.ScrollChanged="er_ScrollChanged"
+         Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"
+        -->
+        <DataGrid  
+            EnableRowVirtualization="True"
+          VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+          VirtualizingPanel.IsVirtualizing="True"
+            ScrollViewer.CanContentScroll="True"
+                     ScrollViewer.ScrollChanged="er_ScrollChanged"
+            SelectionMode="Extended" SelectionUnit="Cell"   MouseRightButtonUp="er_MouseRightButtonUp" AutoGeneratingColumn="e_AutoGeneratingColumn" x:Name="er" ItemsSource="{Binding Data}">
+            <DataGrid.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </DataGrid.ItemsPanel>
+                <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Template">
                         <Setter.Value>
-                            <ContextMenu>
-                                <MenuItem Header="Подробно"/>
-                                <MenuItem Header="визуальная настройка"/>
-                            </ContextMenu>
+                            <ControlTemplate TargetType="DataGridColumnHeader">
+                                <Grid>
+                                    <CheckBox    Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" Background="Tomato" Content="{TemplateBinding Content}"/>
+                                </Grid>
+                            </ControlTemplate>
                         </Setter.Value>
                     </Setter>
                 </Style>
-            </DataGrid.RowStyle>
-            <DataGrid.GroupStyle>
-                <GroupStyle>
-                    <GroupStyle.ContainerStyle>
-                        <Style TargetType="{x:Type GroupItem}">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type GroupItem}">
-                                        <Expander >
-                                            <Expander.Header>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock  Text="{Binding Name}"/>
-                                                    <TextBlock Text="{Binding Items.Count,StringFormat=', Количество записей= {0}'}" />
-                                                </StackPanel>
-                                            </Expander.Header>
-                                            <StackPanel >
+            </DataGrid.Resources>
+            </DataGrid>
+     
 
-                                                <!--<StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Name}" />
-                                                    <TextBlock Text="{Binding Path=Items[0].IsMale}"></TextBlock>
+        <Button Grid.Row="2" Click="Button_Click" ></Button>
 
-                                                </StackPanel>-->
-                                                <ItemsPresenter  SnapsToDevicePixels="True" VirtualizingPanel.IsVirtualizing="True" />
-                                            </StackPanel>
-                                        </Expander>
-                                       
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </GroupStyle.ContainerStyle>
-                </GroupStyle>
-            </DataGrid.GroupStyle>
-            <!--<DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding ID}"/>
-                <DataGridTextColumn Header="ID" Binding="{Binding Name}"/>
-                <DataGridTextColumn Header="ID" Binding="{Binding ID}"/>
-            </DataGrid.Columns>-->
-        </DataGrid>
-        <Grid  Grid.Column="1" Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="30"/>
-                <RowDefinition/>
-            </Grid.RowDefinitions>
-            <Label Content="Все товары"/>
-            <ListBox SelectionMode="Extended" SelectedValue="{Binding SelectedTP, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" ItemsSource="{Binding TP}">
-
-            </ListBox>
-        </Grid>
-        <Grid Grid.Row="2" Grid.Column="1">
-            
-        </Grid>
     </Grid>
 </Window>

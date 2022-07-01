@@ -1,16 +1,22 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -21,219 +27,351 @@ using System.Windows.Shapes;
 
 namespace ExpandDataGrid
 {
-    /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window,INotifyPropertyChanged
+    public static class d
     {
-       public ObservableCollection<Employee> employees { get; set; } = new ObservableCollection<Employee>();
-        public ObservableCollection<string> TP { get; set; } = new ObservableCollection<string>();
-        private string _selectedTP;
-        public string SelectedTP { get {
+        private static readonly FieldInfo StorageField = typeof(DataColumn).GetField("_storage",
+           BindingFlags.Instance | BindingFlags.NonPublic);
 
-                if (_selectedTP!=null)
+        private static readonly FieldInfo ValuesField =
+            typeof(DataTable).Assembly.GetType("System.Data.Common.StringStorage")
+                .GetField("values", BindingFlags.Instance | BindingFlags.NonPublic);
+        public static DataTable Compact(this DataTable table)
+        {
+            if (table.Rows.Count == 0)
+                return table;
+
+            var exclusiveStrings = new Dictionary<string, string>();
+            for (int column = 0; column < table.Columns.Count; ++column)
+            {
+                if (table.Columns[column].DataType == typeof(string))
                 {
-                    collectionView.Filter = item => { Employee employee = item as Employee; return employee.Name_TP == _selectedTP; };
-                    NotifyPropertyChanged("collectionView");
-
-                    //this.Source.Filter = item => {
-                    //    ViewItem vitem = item as ViewItem;
-                    //    return vItem != null && vitem.Name.Contains("A");
+                    // Прямой доступ к массиву (вертикальное хранилище)
+                    var values = (string[])ValuesField.GetValue(StorageField.GetValue(table.Columns[column]));
+                    int rowCount = table.Rows.Count;
+                    for (int row = 0; row < rowCount; ++row)
+                    {
+                        var value = values[row];
+                        if (value != null)
+                        {
+                            string hashed;
+                            if (!exclusiveStrings.TryGetValue(value, out hashed))
+                                // строка встречается впервые
+                                exclusiveStrings.Add(value, value);
+                            else
+                                // дубликат
+                                values[row] = hashed;
+                        }
                     }
-                return _selectedTP;
-            
-            } set => _selectedTP = value; }
-        public string LoadData { get; set; }
-       public CollectionView collectionView { get; set; } 
-
-        public bool isexp { get; set; } = false;
-       
+                    exclusiveStrings.Clear();
+                }
+            }
+            return table;
+        }
+    }
+    public class t
+    {
+        public int id { get; set; } = 1;
+        public int MyProperty { get; set; } = 2;
+        public string Txt { get; set; } = "sdffffffffffffffffffffffffffffffffffffffffff" +
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" +
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" +
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" +
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" +
+            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    }
+    public partial class MainWindow : Window
+    {
+        public DataTable Data { get; set; }
+        public ObservableCollection<t> Ts { get; set; }
+        // public CollectionView DataC { get; set; }
+        public ObservableCollection<KeyValuePair<string,object>> keyValues = new ObservableCollection<System.Collections.Generic.KeyValuePair<string, object>>();
         public MainWindow()
         {
             InitializeComponent();
-            System.Data.SqlClient.SqlConnection sqlConnection = new System.Data.SqlClient.SqlConnection(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\lenovo\source\repos\ConsoleApp1\ConsoleApp1\Database1.mdf;Integrated Security=True;Connect Timeout=30");
-            sqlConnection.Open();
-            SqlCommand command = new SqlCommand("Select * from dbo.EKS", sqlConnection);
-            SqlDataReader reader = command.ExecuteReader();
-            while(reader.Read())
-            {
 
-                employees.Add(new Employee { 
-                    PK=reader[0].ToString(),
-                    KM = reader[1].ToString(), 
-                    GR_20 = reader[2].ToString(),
-                    GR_21 = reader[3].ToString(),
-                    GR_22 = reader[4].ToString(),
-                    GR_23 = reader[5].ToString(),
-                    Name_TP = reader[6].ToString(),
-                    Code_TP = reader[7].ToString(),
-                    Type_Matrix = reader[8].ToString(),
-                    id=Convert.ToInt32( reader[14])
-                });
+            SqlConnection connection = new SqlConnection(@"Data Source=(LocalDB)\MSSQLLocalDB;Initial Catalog=C:\USERS\LENOVO\SOURCE\REPOS\CONSOLEAPP1\CONSOLEAPP1\DATABASE1.MDF;Integrated Security=True");
+            connection.Open();
+             SqlCommand sqlDataAdapter = new SqlCommand(@"select * from( select * from dbo.EKS) as t
+pivot(
+max( [Формат])
+for [Неделя] in ([1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[12],[13],[14],[15],[17],[18],[19],[20])
+) as prt", connection);
+
+            //SqlDataReader sqlDataRead = sqlDataAdapter.ExecuteReader();
+            SqlDataAdapter adapter = new SqlDataAdapter(sqlDataAdapter);
+            Data = new DataTable();
+            adapter.Fill(Data);
+
+            connection.Close();
+
+
+             DataContext = this;
+          
+        }
+
+        private void e_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+        {
+        }
+
+        private void e_Loaded(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void er_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            DependencyObject dep = (DependencyObject)e.OriginalSource;
+
+        }
+        int selectedColumnIndex=0;
+        private void Window_ContentRendered(object sender, EventArgs e)
+        {
+            //selectedColumnIndex = 0;
+            //DataGridColumnHeader columnHeader = DataGridHelper.GetColumnHeader(er, selectedColumnIndex);
+            //Collection<TextBlock> textblocks = VisualTreeHelper.GetVisualChildren<TextBlock>(columnHeader);
+            //TextBlock textblock = textblocks[0];
+            //textblock.MouseLeftButtonDown += new MouseButtonEventHandler(textblock_MouseLeftButtonDown);
+        }
+        void textblock_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+          
+        }
+
+        private void er_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+        public IEnumerable<DataGridRow> GetDataGridRows(DataGrid grid)
+        {
+            List<DataGridRow> dataGrids = new List<DataGridRow>();
+            for (int i = 0; i < grid.Items.Count; i++)
+            {
+                var row = grid.ItemContainerGenerator.ContainerFromIndex(i) as DataGridRow;
+                if (null != row)
+                {
+                    dataGrids.Add(row);
+                }
+                /* yield return row;*/
+            }
+            return dataGrids;
+        }
+        bool isselectbutton = false;
+        int indexcolumn = 0;
+
+
+        private void er_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (isselectbutton)
+            {
+                var rows = GetDataGridRows(er);
+                //  int index = 0;
+                foreach (DataGridRow r in rows)
+                {
+                    if (r != null)
+                    {
+                        //   index++;
+                        foreach (var item in ColorCol)
+                        {
+                            (er.Columns[item].GetCellContent(r) as TextBlock).Background = Brushes.Red;
+
+                        }
+
+                    }
+                }
+                //    Debug.WriteLine(index);
+            }
+            else
+            {
+                var rows = GetDataGridRows(er);
+
+                foreach (DataGridRow r in rows)
+                {
+                    if (r != null)
+                    {
+                        foreach (var item in ColorNull)
+                        {
+                            (er.Columns[item].GetCellContent(r) as TextBlock).Background = Brushes.Transparent;
+                        }
+                    }
+                }
             }
 
-            TP =  new ObservableCollection<string>( employees.Select(x => x.Name_TP).Distinct().ToList()) ;
-            LoadData = "Начало загрузки";
-
-            //employees.Add(new Employee { ID = 1, Name = "Mike", IsMale = true, Type = EmployeeType.Normal, SiteID = new Uri("http://localhost/4322"), BirthDate = new DateTime(1980, 1, 1) });
-            //employees.Add(new Employee { ID = 2, Name = "George", IsMale = true, Type = EmployeeType.Manager, SiteID = new Uri("http://localhost/4432"), BirthDate = new DateTime(1984, 2, 1) });
-            //employees.Add(new Employee { ID = 3, Name = "Vicky", IsMale = false, Type = EmployeeType.Supervisor, SiteID = new Uri("http://localhost/4872"), BirthDate = new DateTime(1975, 3, 1) });
-            //employees.Add(new Employee { ID = 4, Name = "Michael", IsMale = true, Type = EmployeeType.Normal, SiteID = new Uri("http://localhost/4322"), BirthDate = new DateTime(1988, 1, 1) });
-            //employees.Add(new Employee { ID = 5, Name = "Martin", IsMale = true, Type = EmployeeType.Normal, SiteID = new Uri("http://localhost/4432"), BirthDate = new DateTime(1989, 2, 1) });
-            //employees.Add(new Employee { ID = 6, Name = "Lucy", IsMale = false, Type = EmployeeType.Supervisor, SiteID = new Uri("http://localhost/4872"), BirthDate = new DateTime(1967, 3, 1) });
-            //employees.Add(new Employee { ID = 7, Name = "Brian", IsMale = true, Type = EmployeeType.Normal, SiteID = new Uri("http://localhost/4322"), BirthDate = new DateTime(1942, 1, 1) });
-            //employees.Add(new Employee { ID = 8, Name = "Santa", IsMale = true, Type = EmployeeType.Normal, SiteID = new Uri("http://localhost/4432"), BirthDate = new DateTime(1976, 2, 1) });
-            //employees.Add(new Employee { ID = 9, Name = "Ruby", IsMale = false, Type = EmployeeType.Normal, SiteID = new Uri("http://localhost/4872"), BirthDate = new DateTime(1990, 3, 1) });
-
-
-
-            //collectionView.GroupDescriptions.Add(new PropertyGroupDescription("Type"));
-
-            //dataGrid.ItemsSource = mycollection.View;
-            //Thread thread = new Thread(() =>
-            //{
-            //    CollectionView collectionView;
-            //    Console.WriteLine("000000000000000000000000000000");
-            //    collectionView =/*(CollectionView) CollectionViewSource.GetDefaultView */new ListCollectionView(employees);
-
-            //    App.Current.Dispatcher.Invoke(() =>
-            //    {
-            //        this.collectionView = collectionView;
-            //        NotifyPropertyChanged("collectionView");
-            //        Console.WriteLine("111111111111111111111");
-            //        //gh.ItemsSource=
-
-            //    });
-            //    Console.WriteLine("2222222222222222222222222");
-
-            //});
-            //thread.Start();
-            //  myDataGrid.ItemsSource = collectionView;
-            ExcelToSqlServer();
-            DataContext = this;
-
+            // MessageBox.Show(index.ToString());
         }
-        public class Employee
+
+        List<int> ColorCol = new List<int>();
+        List<int> ColorNull = new List<int>();
+        private void CheckBox_Checked(object sender, RoutedEventArgs e)
         {
-            public int id { get; set; }
-            public string PK {get;set;}
-            public string KM {get;set;}
-            public string GR_20{get;set;}
-            public string GR_21 { get;set;}
-            public string GR_22 { get;set;}
-            public string GR_23 { get;set;}
-            public string Name_TP {get;set;}
-            public string Code_TP {get;set;}
-            
-            public string Type_Matrix {get;set;}
-            public string OKR {get;set;}
-            public string PC {get;set;}
-        }
-        private void ExcelToSqlServer()
-        {
+            var index = er.Columns.Single(c => c.Header.ToString() == (sender as CheckBox).Content.ToString()).DisplayIndex;
+            indexcolumn = index;
+            ColorCol.Add(index);
+            ColorNull.Remove(index);
+            isselectbutton = true;
+            er_ScrollChanged(null, null);
 
 
         }
-        public enum EmployeeType
+
+        private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
         {
-            Normal,
-            Supervisor,
-            Manager
+            var rows = GetDataGridRows(er);
+            var index = er.Columns.Single(c => c.Header.ToString() == (sender as CheckBox).Content.ToString()).DisplayIndex;
+            indexcolumn = index;
+            isselectbutton = false;
+            ColorCol.Remove(index);
+            ColorNull.Add(index);
+
+            int i = 0;
+            er_ScrollChanged(null,null);
+       
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void NotifyPropertyChanged([CallerMemberName] String propertyName = "")
+   
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            //Data.Dispose();
+            //Data = null;
         }
-
-        private void Expander_Expanded(object sender, RoutedEventArgs e)
+    }
+    public static class DataGridHelper
+    {
+        public static DataGridColumnHeader GetColumnHeader(DataGrid dataGrid, int index)
         {
-            bool df = (sender as Expander).IsExpanded;
-            isexp = df;
-            Debug.WriteLine(isexp);
-            NotifyPropertyChanged(nameof(isexp));
+            DataGridColumnHeadersPresenter presenter = FindVisualChild<DataGridColumnHeadersPresenter>(dataGrid);
+
+            if (presenter != null)
+            {
+                return (DataGridColumnHeader)presenter.ItemContainerGenerator.ContainerFromIndex(index);
+            }
+
+            return null;
         }
-
-        private void Expander_Expanded_1(object sender, RoutedEventArgs e)
+        public static DataGridRow GetRow(DataGridCell dataGridCell)
         {
-            bool df = (sender as Expander).IsExpanded;
-            isexp = df;
-            Debug.WriteLine(isexp);
-            NotifyPropertyChanged(nameof(isexp));
+            int rowIndex = GetRowIndex(dataGridCell);
+            DataGrid dataGrid = GetDataGridFromChild(dataGridCell);
+
+            return GetRow(dataGrid, rowIndex);
         }
-
-        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        public static int GetRowIndex(DataGridCell dataGridCell)
         {
-            await Task.Run(  () =>  {
-                ObservableCollection<Employee> employees = new ObservableCollection<Employee>();
-                employees = this.employees;
-                CollectionView collectionViewregion;
-                //for (int i = 0; i < 2000; i++)
-                //{
-                //    employees.Add(new Employee { ID = 9, Name = "Ruby", IsMale = false, Type = EmployeeType.Normal, SiteID = new Uri("http://localhost/4872"), BirthDate = new DateTime(1990, 3, 1) });
+            // Use reflection to get DataGridCell.RowDataItem property value.
+            PropertyInfo rowDataItemProperty = dataGridCell.GetType().GetProperty("RowDataItem", BindingFlags.Instance | BindingFlags.NonPublic);
 
-                //}
-                CollectionViewSource mycollection = new CollectionViewSource();
+            DataGrid dataGrid = GetDataGridFromChild(dataGridCell);
 
-                mycollection.Source = employees;
-                mycollection.GroupDescriptions.Add(new PropertyGroupDescription("Name_TP"));
-                collectionViewregion = (CollectionView)mycollection.View;
-
-                collectionView = collectionViewregion;
-                LoadData = "Данные загружены";
-              //  employees = null;
-                this.Dispatcher.Invoke(()=> { 
-                    NotifyPropertyChanged("collectionView");
-                    NotifyPropertyChanged("LoadData");
-                
-                });
-                //collectionViewregion = null;
-
-            });
-
+            // Use DataGrid.Items.IndexOf(DataGridCell.RowDataItem) to get the cell's row index.
+            return dataGrid.Items.IndexOf(rowDataItemProperty.GetValue(dataGridCell, null));
         }
-
-        private void ListBox_Selected(object sender, RoutedEventArgs e)
+        public static DataGrid GetDataGridFromChild(DependencyObject dataGridPart)
         {
-
+            if (System.Windows.Media.VisualTreeHelper.GetParent(dataGridPart) == null)
+            {
+                return null;
+            }
+            if (System.Windows.Media.VisualTreeHelper.GetParent(dataGridPart) is DataGrid)
+            {
+                return (DataGrid)System.Windows.Media.VisualTreeHelper.GetParent(dataGridPart);
+            }
+            else
+            {
+                return GetDataGridFromChild(System.Windows.Media.VisualTreeHelper.GetParent(dataGridPart));
+            }
         }
-
-        private  void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        public static DataGridRow GetRow(DataGrid dataGrid, int index)
         {
-            string sl = (sender as ComboBox).Text as string;
-
-            //Dictionary<string, string> pairs = new Dictionary<string, string>();
-            ////pairs.Add("ТП", "Name_TP");
-            string b = "";
-            //if (pairs[sl]!=null)
-            //{
-            //    b = pairs[sl];
-            //}
-            // Task.Run(() =>
-            //{
-                ObservableCollection<Employee> employees = new ObservableCollection<Employee>();
-                employees = this.employees;
-                CollectionView collectionViewregion;
-
-                CollectionViewSource mycollection = new CollectionViewSource();
-
-                mycollection.Source = employees;
-                mycollection.GroupDescriptions.Add(new PropertyGroupDescription("Name_TP"));
-                collectionViewregion = (CollectionView)mycollection.View;
-
-                collectionView = collectionViewregion;
-                LoadData = "Данные загружены";
-                //  employees = null;
-                this.Dispatcher.Invoke(() =>
+            DataGridRow row = (DataGridRow)dataGrid.ItemContainerGenerator.ContainerFromIndex(index);
+            row = (DataGridRow)dataGrid.ItemContainerGenerator.ContainerFromIndex(index);
+            return row;
+        }
+        public static DataGridCell GetCell(DataGridRow rowContainer, int column)
+        {
+            DataGridCellsPresenter presenter = GetCellsPresenter(rowContainer);
+            if (presenter != null)
+            {
+                return presenter.ItemContainerGenerator.ContainerFromIndex(column) as DataGridCell;
+            }
+            return null;
+        }
+        public static DataGridCellsPresenter GetCellsPresenter(Visual parent)
+        {
+            return FindVisualChild<DataGridCellsPresenter>(parent);
+        }
+        public static DataGridCell GetCell(DataGrid dataGrid, int row, int column)
+        {
+            DataGridRow rowContainer = GetRow(dataGrid, row);
+            if (rowContainer != null)
+            {
+                DataGridCellsPresenter presenter = FindVisualChild<DataGridCellsPresenter>(rowContainer);
+                DataGridCell cell = (DataGridCell)presenter.ItemContainerGenerator.ContainerFromIndex(column);
+                cell = (DataGridCell)presenter.ItemContainerGenerator.ContainerFromIndex(column);
+                return cell;
+            }
+            return null;
+        }
+        public static childItem FindVisualChild<childItem>(DependencyObject obj)
+        where childItem : DependencyObject
+        {
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(obj); i++)
+            {
+                DependencyObject child = System.Windows.Media.VisualTreeHelper.GetChild(obj, i);
+                if (child != null && child is childItem)
+                    return (childItem)child;
+                else
                 {
-                    NotifyPropertyChanged("collectionView");
-                    NotifyPropertyChanged("LoadData");
+                    childItem childOfChild = FindVisualChild<childItem>(child);
+                    if (childOfChild != null)
+                        return childOfChild;
+                }
+            }
+            return null;
+        }
+    }
+    public static class VisualTreeHelper
+    {
+        private static void GetVisualChildren<T>(DependencyObject current, Collection<T> children) where T : DependencyObject
+        {
+            if (current != null)
+            {
+                if (current.GetType() == typeof(T))
+                {
+                    children.Add((T)current);
+                }
 
-                });
-                //collectionViewregion = null;
-           // });
+                for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(current); i++)
+                {
+                    GetVisualChildren<T>(System.Windows.Media.VisualTreeHelper.GetChild(current, i), children);
+                }
+            }
+        }
+        public static Collection<T> GetVisualChildren<T>(DependencyObject current) where T : DependencyObject
+        {
+            if (current == null)
+            {
+                return null;
+            }
+
+            Collection<T> children = new Collection<T>();
+
+            GetVisualChildren<T>(current, children);
+
+            return children;
+        }
+        public static T GetVisualChild<T, P>(P templatedParent)
+            where T : FrameworkElement
+            where P : FrameworkElement
+        {
+            Collection<T> children = VisualTreeHelper.GetVisualChildren<T>(templatedParent);
+
+            foreach (T child in children)
+            {
+                if (child.TemplatedParent == templatedParent)
+                {
+                    return child;
+                }
+            }
+            return null;
         }
     }
 }
